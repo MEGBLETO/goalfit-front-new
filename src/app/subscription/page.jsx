@@ -102,7 +102,6 @@ export default function SubscriptionOfferPage() {
           </h2>
         </div>
         {/* Subscription summary card */}
-        {/* {renderSubscriptionCard()} */}
         <div className="space-y-8 lg:grid lg:grid-cols-2 sm:gap-6 xl:gap-8 lg:space-y-0 lg:items-center">
           <div className="group relative flex flex-col mx-auto w-full max-w-md bg-white rounded-2xl shadow-2xl transition-all duration-300 p-8 xl:p-12">
             <div className="border-b border-solid border-gray-200 pb-9 mb-9">
@@ -204,10 +203,11 @@ export default function SubscriptionOfferPage() {
               </button>
             ) : (
               <button
-                onClick={() => router.push('/subscription')}
+                onClick={() => handleSubscribe()}
                 className="py-2.5 px-5 bg-green-500 shadow-sm rounded-full transition-all duration-500 text-base text-white font-semibold text-center w-fit mx-auto hover:bg-green-600"
+                disabled={isLoading}
               >
-                S'abonner
+                {isLoading ? 'Chargement...' : "S'abonner"}
               </button>
             )}
           </div>
