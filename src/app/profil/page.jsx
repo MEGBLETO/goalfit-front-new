@@ -557,7 +557,7 @@ const ProfilPage = () => {
                     <button
                       type="button"
                       className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg shadow-lg transition-colors duration-300"
-                      onClick={() => window.location.href = '/subscription/select'}
+                      onClick={() => window.location.href = '/subscription'}
                     >
                       S'abonner
                     </button>
