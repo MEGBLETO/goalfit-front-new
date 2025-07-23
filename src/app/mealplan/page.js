@@ -207,6 +207,7 @@ const MealPlan = () => {
   const MealCard = ({ mealType, mealData, isCompleted, onToggleComplete }) => {
     const { name, ingredients, instructions, duration, nutrition, imageUrl } =
       mealData;
+
     const displayImage = imageUrl || "/img/benefit-one.png";
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg p-4 relative">

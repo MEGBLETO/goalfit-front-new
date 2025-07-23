@@ -28,8 +28,6 @@ const VerifyEmailContent = () => {
           { params: { token } }
         );
 
-        console.log('response', response);
-
         if (response.status === 200) {
           toast.success('Email verified successfully!');
           setMessage('Your email has been verified successfully.');

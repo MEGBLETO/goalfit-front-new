@@ -18,11 +18,10 @@ export default function ReviewStep({ setValidationTrigger, setClearErrorsTrigger
   const { watch, setValue } = useFormContext()
   const [editingSection, setEditingSection] = useState(null)
   
-  // Watch all form values
   const formData = watch()
   
   useEffect(() => {
-    setValidationTrigger(() => async () => true) // Always valid for review
+    setValidationTrigger(() => async () => true) 
     setClearErrorsTrigger(() => () => {})
   }, [setValidationTrigger, setClearErrorsTrigger])
 
@@ -355,36 +354,6 @@ export default function ReviewStep({ setValidationTrigger, setClearErrorsTrigger
         </Typography>
         <button
           onClick={() => {
-            console.log('=== QUIZ DATA RECAP ===')
-            console.log('Raw form data:', formData)
-            console.log('Formatted data structure:')
-            console.log({
-              personalInfo: {
-                gender: formData.gender,
-                dateOfBirth: formData.dateOfBirth,
-                fitnessLevel: formData.fitnessLevel,
-                selectedObjective: formData.selectedObjective
-              },
-              measurements: {
-                weight: formData.weight,
-                objectiveWeight: formData.objectiveWeight,
-                height: formData.height
-              },
-              dietary: {
-                restrictions: formData.restrictions
-              },
-              equipment: {
-                equipment: formData.equipment
-              },
-              health: {
-                healthConsiderations: formData.healthConsiderations
-              },
-              availability: {
-                daysPerWeek: formData.daysPerWeek,
-                minutesPerDay: formData.minutesPerDay
-              }
-            })
-            console.log('=== END QUIZ DATA RECAP ===')
           }}
           className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
         >

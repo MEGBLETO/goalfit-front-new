@@ -113,7 +113,7 @@ const Navbar = ({ handleSidebar }) => {
 
       const data = await response.json()
       setUser(data)
-      console.log('User data loaded:', data)
+
     } catch (error) {
       console.error('Error fetching user data:', error)
       setUser({

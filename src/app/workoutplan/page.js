@@ -82,10 +82,8 @@ const WorkoutPlan = () => {
         throw new Error('Failed to fetch user profile')
       }
 
-      // Choose API endpoint based on subscription status
       const hasActiveSubscription = !!userData?.subscription && userData.subscription.status === 'ACTIVE'
       const workoutApiUrl = hasActiveSubscription ? WORKOUT_API_URL : WORKOUT_DEFAULT_API_URL
-      console.log(workoutApiUrl, "Selected workout API URL")
 
       try {
         const workoutResponse = await axios.get(workoutApiUrl, {
@@ -93,9 +91,9 @@ const WorkoutPlan = () => {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          timeout: 15000, // 15 second timeout
+          timeout: 15000, 
         })
-        console.log('Received workout data from API:', workoutResponse.data);
+        
         setCurrentWorkoutData(workoutResponse.data)
       } catch (error) {
         console.error('Error fetching workout plans:', error)

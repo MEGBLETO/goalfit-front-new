@@ -33,7 +33,6 @@ export default function Home() {
         toast.error("Une erreur s'est produite");
       }
     } catch (error) {
-      console.log(error.response.data.message);
       toast.error(error.response.data.message); 
       console.error(error);
     }

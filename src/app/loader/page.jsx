@@ -46,7 +46,6 @@ export default function MultiStepForm() {
         { workoutPlans },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      console.log('Workout plans inserted:', response.data);
     } catch (error) {
       console.error('Error inserting workout plans:', error);
     }
@@ -59,7 +58,6 @@ export default function MultiStepForm() {
         { mealplans: mealPlans },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      console.log('Meal plans inserted:', response.data);
     } catch (error) {
       console.error('Error inserting meal plans:', error);
     }

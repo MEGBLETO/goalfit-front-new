@@ -94,27 +94,19 @@ export default function MultiStepForm() {
       contact: formData.phoneNumber,
     }
 
-    console.log('=== QUIZ SUBMISSION DATA ===')
-    console.log('Raw form data:', formData)
-    console.log('Formatted data for backend:', formattedData)
-    console.log('=== END QUIZ SUBMISSION DATA ===')
-
     return formattedData
   }
 
   const onSubmit = async (data) => {
     try {
       const formattedData = formatSubmissionData(data)
-      console.log('Formatted Form Data Submitted:', formattedData)
       const token = getToken()
       if (!token) {
         throw new Error('No token found')
       }
       const userId = getUserId(token)
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-      
-      console.log('Debug - Base URL:', baseUrl)
-      console.log('Debug - Full URL:', `${baseUrl}/user/${userId}`)
+    
       
       // Update user profile data
       const response = await axios.put(
@@ -126,7 +118,6 @@ export default function MultiStepForm() {
       )
       
       if (response.status === 200) {
-        console.log('User updated successfully:', response.data)
         
         // Update firstLogin to false
         await axios.patch(

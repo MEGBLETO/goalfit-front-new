@@ -21,7 +21,6 @@ export default function Home() {
         `${process.env.NEXT_PUBLIC_BASE_URL}/auth/login`,
         data
       );
-      console.log(response, "hello")
   
       if (response.status === 201) {
         toast.success("Login successful!");
@@ -37,7 +36,6 @@ export default function Home() {
           }
         );
 
-        console.log(userResponse, "userResponse");
   
         if (userResponse.status === 200) {
           if (userResponse.data.firstLogin) {

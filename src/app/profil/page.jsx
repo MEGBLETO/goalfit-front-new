@@ -41,28 +41,23 @@ const ProfilPage = () => {
         }
         const data = await response.json()
 
-        // Check if subscription exists before trying to access it
         if (data.subscription) {
           data.subscription.status === 'ACTIVE'
             ? setBadgeColor('bg-green-100 text-green-800')
             : setBadgeColor('bg-red-100 text-red-800')
         } else {
-          setBadgeColor('bg-gray-100 text-gray-800') // Default color for no subscription
+          setBadgeColor('bg-gray-100 text-gray-800') 
         }
 
-        // Set form values
         setValue('name', data.name || '')
         setValue('surname', data.surname || '')
         const formattedDate = formatDateForInput(data.profile?.dateOfBirth);
-        console.log('Setting dateOfBirth:', data.profile?.dateOfBirth, 'Formatted:', formattedDate);
         setValue('dateOfBirth', formattedDate || '')
         setValue('weight', data.profile?.weight || '')
         setValue('height', data.profile?.height || '')
-        console.log('Setting contact:', data.contact);
         setValue('contact', data.contact || '')
         setValue('email', data.email || '')
 
-        // For the Repas & Fitness section
         setValue('healthConsiderations', data.profile?.healthConsiderations?.join(', ') || '')
         setValue('fitnessLevel', data.profile?.fitnessLevel || '')
         setValue('dietaryPreferences', data.profile?.dietaryPreferences?.restrictions?.join(', ') || '')
@@ -73,12 +68,7 @@ const ProfilPage = () => {
         setValue('objectiveWeight', data.profile?.objectiveWeight || '')
 
         setUser(data)
-        console.log('Complete user data:', data);
-        console.log('User contact:', data.contact);
-        console.log('User profile:', data.profile);
-        console.log('Availability data:', data.profile?.availability);
-        console.log('Days per week:', data.profile?.availability?.daysPerWeek);
-        console.log('Minutes per day:', data.profile?.availability?.minutesPerDay);
+     
       } catch (error) {
         console.error('Error fetching user data:', error)
         setError(error.message)
@@ -136,7 +126,6 @@ const ProfilPage = () => {
     setSubmitting(true)
     setError(null)
     
-    // Parse arrays from comma-separated strings
     const healthConsiderations = formData.healthConsiderations 
       ? formData.healthConsiderations.split(',').map(item => item.trim()).filter(item => item)
       : []

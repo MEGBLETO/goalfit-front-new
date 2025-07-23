@@ -29,7 +29,7 @@ export function PopupWidget() {
   })
 
   const onSubmit = async (data, e) => {
-    console.log(data)
+
     try {
       const response = await fetch('', {
         method: 'POST',
