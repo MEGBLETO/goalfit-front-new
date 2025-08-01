@@ -12,6 +12,7 @@ const inter = Inter({ subsets: ["latin"] });
 import { usePathname } from 'next/navigation';
 import GoogleAnalytics from '../components/GoogleAnalytics';
 import AnalyticsListener from '../components/AnalyticsListener';
+import { Suspense } from 'react';
 
 
 
@@ -29,8 +30,10 @@ export default function RootLayout({ children }) {
       <body className={inter.className}>
         <ThemeProvider attribute="class">
            {/* GA */}
-          <GoogleAnalytics />
-          <AnalyticsListener />
+          <Suspense fallback={null}>
+             <GoogleAnalytics />
+             <AnalyticsListener />
+           </Suspense>
           { pathname === "/" || pathname === "/login" || pathname === "/register" ||  pathname === "/account" ||  pathname === "/subscription" ||  pathname === "/verify-email" ||  pathname === "/verify-prompt"  ||  pathname === "/checkout/success" ||  pathname === "/checkout/cancel" ||  pathname === "/loader"  ||  pathname === "/request-password-reset" ||  pathname === "/reset-password" ?
             (<div>{children}</div>) :
             (<div className="flex overflow-hidden w-full min-h-screen min-w-screen bg-gray-50 dark:bg-gray-900">
