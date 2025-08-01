@@ -10,12 +10,11 @@ import { ThemeProvider } from "next-themes";
 import { PopupWidget }  from "../components/PopupWidget";
 const inter = Inter({ subsets: ["latin"] });
 import { usePathname } from 'next/navigation';
+import GoogleAnalytics from '../components/GoogleAnalytics';
+import AnalyticsListener from '../components/AnalyticsListener';
 
 
-// export const metadata = {
-//   title: "GoalFit || Here to help you achieve your dreams",
-//   description: "Here to help you achieve your dreams",
-// };
+
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
@@ -29,6 +28,9 @@ export default function RootLayout({ children }) {
      <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class">
+           {/* GA */}
+          <GoogleAnalytics />
+          <AnalyticsListener />
           { pathname === "/" || pathname === "/login" || pathname === "/register" ||  pathname === "/account" ||  pathname === "/subscription" ||  pathname === "/verify-email" ||  pathname === "/verify-prompt"  ||  pathname === "/checkout/success" ||  pathname === "/checkout/cancel" ||  pathname === "/loader"  ||  pathname === "/request-password-reset" ||  pathname === "/reset-password" ?
             (<div>{children}</div>) :
             (<div className="flex overflow-hidden w-full min-h-screen min-w-screen bg-gray-50 dark:bg-gray-900">
