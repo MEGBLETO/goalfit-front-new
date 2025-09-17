@@ -4,7 +4,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { FaCheckCircle } from 'react-icons/fa';
-import axios from 'axios';
 import Logo from '../../../components/logo';
 import Cookies from 'js-cookie';
 

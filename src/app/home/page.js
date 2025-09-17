@@ -13,6 +13,7 @@ import {
   MdAccessTimeFilled,
   MdLocalFireDepartment,
   MdLock,
+  MdDownload, MdDateRange
 } from 'react-icons/md'
 import { FaPlay } from 'react-icons/fa6'
 import Skeleton from '@mui/material/Skeleton'
@@ -23,6 +24,10 @@ import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'
 var isToday = require('dayjs/plugin/isToday')
 import { GiMuscleUp, GiWheat, GiButter, GiFire } from 'react-icons/gi'
 import { Tabs } from 'flowbite-react'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import 'dayjs/locale/fr'
 
 dayjs.extend(isToday)
 dayjs.extend(isSameOrAfter)
@@ -30,14 +35,11 @@ dayjs.extend(isSameOrBefore)
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Title)
 
-const UNSPLASH_API_URL = 'https://api.unsplash.com/search/photos'
-
 export default function Home() {
   const router = useRouter()
   const [user, setUser] = useState({})
   const [currentMealData, setCurrentMealData] = useState(null)
   const [currentWorkoutData, setCurrentWorkoutData] = useState(null)
-  const [currentMealImage, setCurrentMealImage] = useState(null)
   const [totalCalories, setTotalCalories] = useState(0)
   const [totalFat, setTotalFat] = useState(0)
   const [totalProtein, setTotalProtein] = useState(0)
@@ -48,6 +50,10 @@ export default function Home() {
   const [submittingWeight, setSubmittingWeight] = useState(false)
   const [dailyTotals, setDailyTotals] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 })
   const [monthlyData, setMonthlyData] = useState({ labels: [], calories: [], protein: [], carbs: [], fat: [] })
+  const [showDownloadModal, setShowDownloadModal] = useState(false)
+  const [downloadStartDate, setDownloadStartDate] = useState(dayjs().subtract(30, 'day'))
+  const [downloadEndDate, setDownloadEndDate] = useState(dayjs())
+  const [isDownloading, setIsDownloading] = useState(false)
 
   const fetchUserData = async () => {
     const token = getToken()
@@ -102,41 +108,31 @@ export default function Home() {
 
   const fetchMealPlans = async (id) => {
     const token = getToken()
-
     try {
       const response = await fetch('http://localhost:5001/bdd/meal/' + id, {
         method: 'GET',
         headers: getAuthHeaders(token),
       })
-
-      console.log(response, "hello")
       if (!response.ok) {
         throw new Error('Failed to fetch meal plans')
       }
       const data = await response.json()
       setCurrentMealData(data)
-      if (data) {
-        fetchMealImage(data.afternoonMeal.name.split(' ').slice(0, 3).join(' '))
-      }
-
       const calories =
         data.morningMeal.nutrition.calories +
         data.afternoonMeal.nutrition.calories +
         data.eveningMeal.nutrition.calories
       setTotalCalories(calories)
-
       const fat =
         parseInt(data.morningMeal.nutrition.fat) +
         parseInt(data.afternoonMeal.nutrition.fat) +
         parseInt(data.eveningMeal.nutrition.fat)
       setTotalFat(fat)
-
       const protein =
         parseInt(data.morningMeal.nutrition.protein) +
         parseInt(data.afternoonMeal.nutrition.protein) +
         parseInt(data.eveningMeal.nutrition.protein)
       setTotalProtein(protein)
-
       const carbohydrates =
         parseInt(data.morningMeal.nutrition.carbohydrates) +
         parseInt(data.afternoonMeal.nutrition.carbohydrates) +
@@ -144,21 +140,6 @@ export default function Home() {
       setTotalCarbo(carbohydrates)
     } catch (error) {
       console.error('Error fetching meal plans:', error)
-    }
-  }
-
-  const fetchMealImage = async (foodname) => {
-    try {
-      const response = await fetch(
-        `${UNSPLASH_API_URL}?query=${encodeURIComponent(foodname)}&client_id=${process.env.UNSPLASH_API_KEY}&lang=fr`
-      )
-      const data = await response.json()
-      if (data.results && data.results.length > 0) {
-        const imageUrl = data.results[0].urls.regular
-        setCurrentMealImage(imageUrl)
-      }
-    } catch (error) {
-      console.error('Error fetching image:', error)
     }
   }
 
@@ -450,6 +431,115 @@ export default function Home() {
     },
   }
 
+  const exportToCSV = (data, filename) => {
+    const csvContent = "data:text/csv;charset=utf-8," + data
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", filename)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const formatDataForCSV = (weightData, nutritionData) => {
+    let csvContent = "Date,Poids (kg),Calories,Protéines (g),Glucides (g),Lipides (g)\n"
+    
+    // Create a map of dates to combine weight and nutrition data
+    const dateMap = new Map()
+    
+    // Add weight data
+    weightData.forEach(entry => {
+      const date = dayjs(entry.date).format('YYYY-MM-DD')
+      dateMap.set(date, {
+        date: date,
+        weight: entry.weight,
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0
+      })
+    })
+    
+    // Add nutrition data
+    nutritionData.forEach(entry => {
+      const date = dayjs(entry.date).format('YYYY-MM-DD')
+      if (dateMap.has(date)) {
+        const existing = dateMap.get(date)
+        existing.calories += entry.calories || 0
+        existing.protein += entry.protein || 0
+        existing.carbs += entry.carbs || 0
+        existing.fat += entry.fat || 0
+      } else {
+        dateMap.set(date, {
+          date: date,
+          weight: '',
+          calories: entry.calories || 0,
+          protein: entry.protein || 0,
+          carbs: entry.carbs || 0,
+          fat: entry.fat || 0
+        })
+      }
+    })
+    
+    // Convert to CSV format
+    const sortedDates = Array.from(dateMap.values()).sort((a, b) => 
+      dayjs(a.date).diff(dayjs(b.date))
+    )
+    
+    sortedDates.forEach(entry => {
+      csvContent += `${entry.date},${entry.weight},${entry.calories},${entry.protein},${entry.carbs},${entry.fat}\n`
+    })
+    
+    return csvContent
+  }
+
+  const handleDownloadData = async () => {
+    setIsDownloading(true)
+    try {
+      const token = getToken()
+      if (!token) {
+        alert('Veuillez vous connecter pour télécharger vos données')
+        return
+      }
+
+      // Fetch weight data for the selected period
+      const weightResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/user/weight?start=${downloadStartDate.format('YYYY-MM-DD')}&end=${downloadEndDate.format('YYYY-MM-DD')}`,
+        {
+          headers: getAuthHeaders(token)
+        }
+      )
+      
+      const weightData = weightResponse.ok ? await weightResponse.json() : []
+
+      // Fetch nutrition data for the selected period
+      const nutritionResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/bdd/meal/log/range?start=${downloadStartDate.format('YYYY-MM-DD')}&end=${downloadEndDate.format('YYYY-MM-DD')}`,
+        {
+          headers: getAuthHeaders(token)
+        }
+      )
+      
+      const nutritionData = nutritionResponse.ok ? await nutritionResponse.json() : []
+
+      // Format and download the data
+      const csvContent = formatDataForCSV(weightData, nutritionData)
+      const filename = `goalFit-data-${downloadStartDate.format('YYYY-MM-DD')}-to-${downloadEndDate.format('YYYY-MM-DD')}.csv`
+      
+      exportToCSV(csvContent, filename)
+      
+      setShowDownloadModal(false)
+      alert('Données téléchargées avec succès!')
+      
+    } catch (error) {
+      console.error('Error downloading data:', error)
+      alert('Erreur lors du téléchargement des données')
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   return (
     <div className="min-h-fit">
       <Modal open={showWeightPrompt} onClose={() => setShowWeightPrompt(false)}>
@@ -471,13 +561,162 @@ export default function Home() {
           </div>
         </form>
       </Modal>
+      <Modal open={showDownloadModal} onClose={() => setShowDownloadModal(false)}>
+        <div className="flex flex-col items-center justify-center h-full">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-lg w-full mx-4 border border-gray-200 dark:border-gray-700">
+            {/* Header with gradient background */}
+            <div className="w-full mb-6">
+              <div className="flex items-center justify-center mb-4">
+                <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full">
+                  <MdDownload className="h-8 w-8 text-white" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-gray-100">
+                Télécharger mes données
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">
+                Exportez vos données de poids et nutrition au format CSV
+              </p>
+            </div>
+            
+            <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="fr">
+              <div className="w-full space-y-6 mb-8">
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Date de début
+                  </label>
+                  <div className="relative">
+                    <DatePicker
+                      value={downloadStartDate}
+                      onChange={(newValue) => setDownloadStartDate(newValue)}
+                      className="w-full"
+                      slotProps={{
+                        textField: {
+                          size: 'medium',
+                          fullWidth: true,
+                          variant: 'outlined',
+                          sx: {
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '12px',
+                              backgroundColor: 'transparent',
+                              '&:hover .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#3b82f6',
+                              },
+                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#3b82f6',
+                                borderWidth: '2px',
+                              },
+                            },
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Date de fin
+                  </label>
+                  <div className="relative">
+                    <DatePicker
+                      value={downloadEndDate}
+                      onChange={(newValue) => setDownloadEndDate(newValue)}
+                      className="w-full"
+                      slotProps={{
+                        textField: {
+                          size: 'medium',
+                          fullWidth: true,
+                          variant: 'outlined',
+                          sx: {
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '12px',
+                              backgroundColor: 'transparent',
+                              '&:hover .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#3b82f6',
+                              },
+                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#3b82f6',
+                                borderWidth: '2px',
+                              },
+                            },
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </LocalizationProvider>
+            
+            {/* Action buttons with better styling */}
+            <div className="flex gap-4 w-full">
+              <button
+                onClick={() => setShowDownloadModal(false)}
+                className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl transition-all duration-200 ease-in-out transform hover:scale-105"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDownloadData}
+                disabled={isDownloading || !downloadStartDate || !downloadEndDate}
+                className="group relative flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 ease-in-out disabled:transform-none disabled:shadow-none"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-green-600 rounded-xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-200"></div>
+                <span className="relative z-10 flex items-center justify-center gap-2">
+                  {isDownloading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      Téléchargement...
+                    </>
+                  ) : (
+                    <>
+                      <MdDownload className="h-4 w-4" />
+                      Télécharger
+                    </>
+                  )}
+                </span>
+              </button>
+            </div>
+            
+            {/* Info text with better styling */}
+            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-3">
+                <div className="p-1 bg-blue-500 rounded-full">
+                  <MdDateRange className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">
+                    Informations sur l'export
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                    Les données incluront vos poids journaliers et votre consommation nutritionnelle (calories, protéines, glucides, lipides) pour la période sélectionnée.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
       <div className="w-full">
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="rounded-2xl shadow-md bg-white flex flex-col lg:flex-row items-center justify-between px-10 py-4 my-8 md:py-6 xl:py-8 dark:bg-gray-800">
             <div className="w-full">
-              <h2 className="font-manrope text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-4 text-center lg:text-left dark:text-gray-400">
-                Consommation du jour
-              </h2>
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
+                <h2 className="font-manrope text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-400 mb-4 lg:mb-0">
+                  Consommation du jour
+                </h2>
+                
+                <button
+                  onClick={() => setShowDownloadModal(true)}
+                  className="group relative inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 ease-in-out"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-200"></div>
+                  <MdDownload className="h-5 w-5 relative z-10" />
+                  <span className="relative z-10">Exporter mes données</span>
+                  <div className="absolute inset-0 rounded-xl bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-200"></div>
+                </button>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="flex flex-col items-center bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 shadow">
                   <GiMuscleUp className="text-blue-600 dark:text-blue-300 text-3xl mb-2" />

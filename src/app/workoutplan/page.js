@@ -5,7 +5,12 @@ import { motion } from 'framer-motion'
 import dayjs from 'dayjs'
 import 'dayjs/locale/fr'
 import utc from 'dayjs/plugin/utc'
-import { MdAccessTimeFilled, MdLocalFireDepartment } from 'react-icons/md'
+import { 
+  MdAccessTimeFilled, 
+  MdLocalFireDepartment,
+  MdFitnessCenter,
+  MdInfo
+} from 'react-icons/md'
 import Chip from '@mui/material/Chip'
 import Skeleton from '@mui/material/Skeleton'
 import confetti from 'canvas-confetti'
@@ -21,8 +26,27 @@ dayjs.extend(utc)
 const WORKOUT_API_URL = `${process.env.NEXT_PUBLIC_BASE_URL}/bdd/workout`
 const WORKOUT_DEFAULT_API_URL = `${process.env.NEXT_PUBLIC_BASE_URL}/bdd/workout/default`
 const DEEPL_API_KEY = '673ad5f4-44ff-4423-a851-8e959de17dc1:fx'
-const EXERCISEDB_API_KEY = '359ef17886msh8ad7a18e5eeb1fbp11694ajsn863e0707ce40'
-const EXERCISEDB_API_URL = 'https://exercisedb.p.rapidapi.com/exercises'
+// Replace the ExerciseDB constants with Unsplash
+const UNSPLASH_ACCESS_KEY = process.env.NEXT_PUBLIC_UNSPLASH_API_KEY
+const UNSPLASH_API_URL = 'https://api.unsplash.com/search/photos'
+
+// Add image caching
+const imageCache = new Map()
+const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
+
+// Local fallback images (no API calls needed)
+const getLocalFallbackImage = (bodyPart) => {
+  const fallbackImages = {
+    'cardio': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&auto=format',
+    'jambes': 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?w=400&h=300&fit=crop&auto=format',
+    'haut du corps': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&auto=format',
+    'core': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&auto=format',
+    'plein corps': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&auto=format',
+    'default': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&auto=format'
+  }
+  
+  return fallbackImages[bodyPart] || fallbackImages.default
+}
 
 const WorkoutPlan = () => {
   const [currentDate, setCurrentDate] = useState(dayjs().locale('fr'))
@@ -160,124 +184,105 @@ const WorkoutPlan = () => {
     }
   }
 
-  // Fetch exercise data from ExerciseDB and handle fallback logic
+  // Enhanced fetchExercise with Unsplash API
   const fetchExercise = async (exerciseName, bodyPart, defaultDescription) => {
     try {
       if (!exerciseName || !bodyPart) {
         return {
-          imageUrl: '',
+          imageUrl: getLocalFallbackImage(bodyPart),
           instructions: [defaultDescription || 'No description available'],
         }
       }
 
-      // Translate the exercise name and bodyPart into English
-      const translatedName = await getTranslation(exerciseName, 'en')
-      let translatedBodyPart = await getTranslation(bodyPart, 'en')
+      // Check cache first
+      const cacheKey = `${exerciseName}-${bodyPart}`
+      const cached = imageCache.get(cacheKey)
       
-      translatedBodyPart = translatedBodyPart === 'legs' ? 'upper legs' : translatedBodyPart
-      translatedBodyPart = translatedBodyPart === 'arms' ? 'arms legs' : translatedBodyPart
+      if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+        return cached.data
+      }
 
-      try {
-        const response = await axios.get(
-          `${EXERCISEDB_API_URL}/name/${translatedName.split(' ').slice(0, 1).join(' ').toLowerCase()}`,
-          {
+      // Create search queries for better image results
+      const searchQueries = [
+        `${exerciseName} exercise`,
+        `${exerciseName} workout`,
+        `${bodyPart} exercise`,
+        `${exerciseName} fitness`,
+        'fitness exercise' // fallback
+      ]
+
+      // Try each search query until we find an image
+      for (const query of searchQueries) {
+        try {
+          const response = await axios.get(UNSPLASH_API_URL, {
+            params: {
+              query: query,
+              per_page: 1,
+              orientation: 'portrait',
+              content_filter: 'high'
+            },
             headers: {
-              'X-RapidAPI-Key': EXERCISEDB_API_KEY,
-              'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
+              'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`,
+              'Accept-Version': 'v1'
             },
             timeout: 10000,
-          }
-        )
+          })
 
-        const exerciseData = response.data
-
-        if (exerciseData && exerciseData.length > 0) {
-          const instructions = exerciseData[0]?.instructions || []
-          let translatedInstructions = []
+          const imageData = response.data.results[0]
           
-          if (Array.isArray(instructions) && instructions.length > 0) {
-            try {
-              translatedInstructions = await Promise.all(
-                instructions.map((instruction) => getTranslation(instruction, 'fr'))
-              )
-            } catch (translationError) {
-              console.error('Error translating instructions:', translationError)
-              translatedInstructions = instructions
+          if (imageData && imageData.urls) {
+            const result = {
+              imageUrl: imageData.urls.regular,
+              instructions: [defaultDescription || 'Exercise instructions not available'],
+              imageAlt: imageData.alt_description || `${exerciseName} exercise`,
+              photographer: imageData.user?.name || 'Unsplash',
+              photographerUrl: imageData.user?.links?.html || ''
             }
+            
+            // Cache the result
+            imageCache.set(cacheKey, {
+              data: result,
+              timestamp: Date.now()
+            })
+            
+            return result
           }
-
-          return {
-            imageUrl: exerciseData[0]?.gifUrl || '',
-            instructions: translatedInstructions.length > 0 ? translatedInstructions : [defaultDescription],
-          }
-        } else {
-          return await fetchRandomExerciseByBodyPart(translatedBodyPart, defaultDescription)
+        } catch (apiError) {
+          console.log(`No image found for query: ${query}`)
+          continue // Try next query
         }
-      } catch (apiError) {
-        console.error('Error fetching exercise from API:', apiError)
-        return await fetchRandomExerciseByBodyPart(translatedBodyPart, defaultDescription)
       }
+
+      // If no image found, return fallback
+      const fallbackResult = {
+        imageUrl: getLocalFallbackImage(bodyPart),
+        instructions: [defaultDescription || 'Exercise instructions not available'],
+        imageAlt: `${exerciseName} exercise`,
+        photographer: 'GoalFit',
+        photographerUrl: ''
+      }
+      
+      // Cache the fallback too
+      imageCache.set(cacheKey, {
+        data: fallbackResult,
+        timestamp: Date.now()
+      })
+      
+      return fallbackResult
+
     } catch (error) {
       console.error('Error in fetchExercise:', error)
       return {
-        imageUrl: '',
+        imageUrl: getLocalFallbackImage(bodyPart),
         instructions: [defaultDescription || 'Exercise description unavailable'],
+        imageAlt: `${exerciseName} exercise`,
+        photographer: 'GoalFit',
+        photographerUrl: ''
       }
     }
   }
 
-  // Fetch a random exercise by body part
-  const fetchRandomExerciseByBodyPart = async (bodyPart, defaultDescription) => {
-    try {
-      const response = await axios.get(
-        `${EXERCISEDB_API_URL}/bodyPart/${bodyPart.toLowerCase()}`,
-        {
-          headers: {
-            'X-RapidAPI-Key': EXERCISEDB_API_KEY,
-            'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com',
-          },
-          timeout: 10000,
-        }
-      )
-
-      const exerciseData = response.data
-      
-      if (exerciseData && exerciseData.length > 0) {
-        const randomExercise = exerciseData[Math.floor(Math.random() * exerciseData.length)]
-        const instructions = randomExercise?.instructions || []
-
-        let translatedInstructions = []
-        if (Array.isArray(instructions) && instructions.length > 0) {
-          try {
-            translatedInstructions = await Promise.all(
-              instructions.map((instruction) => getTranslation(instruction, 'fr'))
-            )
-          } catch (translationError) {
-            console.error('Error translating random exercise instructions:', translationError)
-            translatedInstructions = instructions
-          }
-        }
-
-        return {
-          imageUrl: randomExercise?.gifUrl || '',
-          instructions: translatedInstructions.length > 0 ? translatedInstructions : [defaultDescription],
-        }
-      } else {
-        return {
-          imageUrl: '',
-          instructions: [defaultDescription || 'No exercise found'],
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching random exercise by body part:', error)
-      return {
-        imageUrl: '',
-        instructions: [defaultDescription || 'Unable to fetch exercise data'],
-      }
-    }
-  }
-
-  // Fetch exercise data with translation and fallback logic
+  // Update the fetchExerciseData function
   const fetchExerciseData = async () => {
     try {
       if (!currentWorkoutData || !currentWorkoutData.workouts) {
@@ -296,18 +301,28 @@ const WorkoutPlan = () => {
 
       const exerciseDataPromises = exercises.map(async (exercise) => {
         try {
-          const { imageUrl, instructions } = await fetchExercise(
+          const { imageUrl, instructions, imageAlt, photographer, photographerUrl } = await fetchExercise(
             exercise.name,
             exercise.bodyPart,
             exercise.description
           )
-          return { ...exercise, imageUrl, instructions }
+          return { 
+            ...exercise, 
+            imageUrl, 
+            instructions,
+            imageAlt,
+            photographer,
+            photographerUrl
+          }
         } catch (err) {
           console.error(`Error fetching data for exercise: ${exercise.name}`, err)
           return {
             ...exercise,
-            imageUrl: '',
+            imageUrl: getLocalFallbackImage(exercise.bodyPart),
             instructions: [exercise.description || 'Instructions not available.'],
+            imageAlt: `${exercise.name} exercise`,
+            photographer: 'GoalFit',
+            photographerUrl: ''
           }
         }
       })
@@ -569,54 +584,181 @@ const WorkoutPlan = () => {
                             <div className="relative flex flex-col items-center border border-solid border-gray-200 dark:border-gray-700 rounded-2xl transition-all duration-500 md:flex-row md:max-w-lg">
                               <div className="relative w-full md:w-40 h-32">
                                 {localWorkout[exercise.name]?.imageUrl ? (
-                                  <Image
-                                    src={localWorkout[exercise.name].imageUrl}
-                                    alt={exercise.name}
-                                    fill={true}
-                                    sizes="100%"
-                                    priority={true}
-                                    unoptimized
-                                    className="rounded-t-2xl md:rounded-2xl object-contain border-b md:border-r"
-                                    onError={(e) => {
-                                      console.error('Image failed to load:', e)
-                                      e.target.style.display = 'none'
-                                    }}
-                                  />
+                                  <div className="relative w-full h-full">
+                                    <Image
+                                      src={localWorkout[exercise.name].imageUrl}
+                                      alt={localWorkout[exercise.name].imageAlt || exercise.name}
+                                      fill={true}
+                                      sizes="100%"
+                                      priority={true}
+                                      unoptimized
+                                      className="rounded-t-2xl md:rounded-2xl object-cover border-b md:border-r"
+                                      onError={(e) => {
+                                        console.error('Image failed to load:', e)
+                                        e.target.src = getLocalFallbackImage(exercise.bodyPart)
+                                      }}
+                                    />
+                                    {/* Photographer credit overlay */}
+                                    {localWorkout[exercise.name]?.photographer && localWorkout[exercise.name].photographer !== 'GoalFit' && (
+                                      <div className="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-1 py-0.5 rounded">
+                                        <a 
+                                          href={localWorkout[exercise.name].photographerUrl} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="hover:underline"
+                                        >
+                                          {localWorkout[exercise.name].photographer}
+                                        </a>
+                                      </div>
+                                    )}
+                                  </div>
                                 ) : (
-                                  <Skeleton
-                                    className="rounded-t-2xl md:rounded-2xl"
-                                    variant="rectangular"
-                                    width="100%"
-                                    height="100%"
-                                  />
+                                  <div className="w-full h-full bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-t-2xl md:rounded-2xl flex items-center justify-center">
+                                    <div className="text-center">
+                                      <MdFitnessCenter className="mx-auto h-8 w-8 text-blue-500 dark:text-blue-400 mb-2" />
+                                      <p className="text-xs text-blue-600 dark:text-blue-300 font-medium">
+                                        {exercise.name}
+                                      </p>
+                                    </div>
+                                  </div>
                                 )}
                               </div>
-                              <div className="p-4">
+                              <div className="p-4 flex-1">
                                 <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2 capitalize transition-all duration-500">
                                   {exercise.name}
                                 </h4>
-                                <p className="text-sm font-normal text-gray-500 dark:text-gray-400 transition-all duration-500 leading-5 mb-5">
-                                  {exercise.reps}
-                                </p>
+                                
+                                {/* Exercise Description */}
+                                {exercise.description && (
+                                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 leading-5">
+                                    {exercise.description}
+                                  </p>
+                                )}
+                                
+                                {/* Exercise Details Grid */}
+                                <div className="grid grid-cols-2 gap-2 mb-3">
+                                  {/* Reps */}
+                                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                    <MdFitnessCenter className="mr-1 h-4 w-4" />
+                                    <span className="font-medium">{exercise.reps}</span>
+                                  </div>
+                                  
+                                  {/* Duration */}
+                                  {exercise.durationMinutes && (
+                                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                      <MdAccessTimeFilled className="mr-1 h-4 w-4" />
+                                      <span className="font-medium">{exercise.durationMinutes} min</span>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Focus Area */}
+                                  {exercise.focus && (
+                                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                      <MdInfo className="mr-1 h-4 w-4" />
+                                      <span className="font-medium capitalize">{exercise.focus}</span>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Estimated Calories */}
+                                  {exercise.estimatedCalories && (
+                                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                      <MdLocalFireDepartment className="mr-1 h-4 w-4" />
+                                      <span className="font-medium">{exercise.estimatedCalories} cal</span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
 
                             {exercise.localId === currentStep && (
                               <>
-                                {localWorkout[exercise.name]?.instructions ? (
-                                  <ul className="list-disc mt-6 ml-6 dark:text-gray-300">
-                                    {localWorkout[exercise.name].instructions?.map(
-                                      (instruction, i) => (
-                                        <li key={i}>{instruction}</li>
-                                      )
+                                {/* Enhanced Exercise Details Panel */}
+                                <div className="mt-6 bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
+                                  <h5 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                                    <MdInfo className="mr-2 h-4 w-4" />
+                                    Détails de l'exercice
+                                  </h5>
+                                  
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    {/* Exercise Info Cards */}
+                                    <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">RÉPÉTITIONS</span>
+                                        <MdFitnessCenter className="h-4 w-4 text-blue-500" />
+                                      </div>
+                                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{exercise.reps}</p>
+                                    </div>
+                                    
+                                    {exercise.durationMinutes && (
+                                      <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">DURÉE</span>
+                                          <MdAccessTimeFilled className="h-4 w-4 text-green-500" />
+                                        </div>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{exercise.durationMinutes} minutes</p>
+                                      </div>
                                     )}
-                                  </ul>
-                                ) : (
-                                  <>
-                                    <Skeleton variant="text" width="80%" />
-                                    <Skeleton variant="text" width="40%" />
-                                  </>
-                                )}
+                                    
+                                    {exercise.focus && (
+                                      <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">ZONE CIBLÉE</span>
+                                          <MdInfo className="h-4 w-4 text-purple-500" />
+                                        </div>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 capitalize">{exercise.focus}</p>
+                                      </div>
+                                    )}
+                                    
+                                    {exercise.estimatedCalories && (
+                                      <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">CALORIES</span>
+                                          <MdLocalFireDepartment className="h-4 w-4 text-orange-500" />
+                                        </div>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{exercise.estimatedCalories} kcal</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Description */}
+                                  {exercise.description && (
+                                    <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">DESCRIPTION</span>
+                                        <MdInfo className="h-4 w-4 text-blue-500" />
+                                      </div>
+                                      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{exercise.description}</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Instructions Section */}
+                                <div className="mt-4">
+                                  <h5 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                                    <MdFitnessCenter className="mr-2 h-4 w-4" />
+                                    Instructions
+                                  </h5>
+                                  
+                                  {localWorkout[exercise.name]?.instructions ? (
+                                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                                      <ul className="list-disc list-inside space-y-2 dark:text-gray-300">
+                                        {localWorkout[exercise.name].instructions?.map(
+                                          (instruction, i) => (
+                                            <li key={i} className="text-sm leading-relaxed">{instruction}</li>
+                                          )
+                                        )}
+                                      </ul>
+                                    </div>
+                                  ) : (
+                                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                                      <Skeleton variant="text" width="80%" />
+                                      <Skeleton variant="text" width="60%" />
+                                      <Skeleton variant="text" width="40%" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Navigation Buttons */}
                                 <div className="flex items-center gap-4 my-6">
                                   {exercise.localId > 1 && (
                                     <button
