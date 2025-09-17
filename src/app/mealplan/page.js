@@ -9,6 +9,7 @@ import {
   MdOutlineWbSunny,
   MdAccessTimeFilled,
   MdLocalFireDepartment,
+  MdDownload, MdPrint, MdShare
 } from "react-icons/md";
 import { HiOutlineArrowRight, HiCheck, HiX } from "react-icons/hi";
 import { PiMoonFill, PiCloudMoonFill } from "react-icons/pi";
@@ -130,6 +131,7 @@ const MealPlan = () => {
   const handleToggleComplete = async (mealType) => {
     const dateStr = currentDate.format("YYYY-MM-DD");
     const key = `${dateStr}-${mealType}`;
+    const today = dayjs().format("YYYY-MM-DD");
 
     const newCompletedMeals = {
       ...completedMeals,
@@ -167,7 +169,11 @@ const MealPlan = () => {
           console.error("Failed to log meal:", err);
         }
       }
-      handleConfetti();
+      
+      // Only show confetti for today's meals
+      if (dateStr === today) {
+        handleConfetti();
+      }
     }
   };
 
@@ -204,11 +210,149 @@ const MealPlan = () => {
     });
   };
 
+  const downloadRecipe = (mealData, mealType) => {
+    const { name, ingredients, instructions, duration, nutrition } = mealData;
+    
+    // Create recipe content
+    const recipeContent = `
+RECETTE: ${name}
+Durée: ${duration || 'Non spécifiée'}
+Date: ${currentDate.format('DD/MM/YYYY')}
+️ Repas: ${mealType === 'breakfast' ? 'Petit-déjeuner' : mealType === 'lunch' ? 'Déjeuner' : 'Dîner'}
+
+  INGRÉDIENTS:
+${ingredients?.map((ingredient, index) => `${index + 1}. ${ingredient}`).join('\n') || 'Aucun ingrédient spécifié'}
+
+  INSTRUCTIONS:
+${instructions?.map((instruction, index) => `${index + 1}. ${instruction}`).join('\n') || 'Aucune instruction spécifiée'}
+
+  VALEURS NUTRITIONNELLES:
+• Calories: ${nutrition?.calories || 0} kcal
+• Protéines: ${nutrition?.protein || 0}g
+• Glucides: ${nutrition?.carbohydrates || 0}g
+• Lipides: ${nutrition?.fat || 0}g
+
+---
+Généré par GoalFit - Votre compagnon fitness
+  `.trim();
+
+    // Create and download file
+    const blob = new Blob([recipeContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${name.replace(/[^a-zA-Z0-9]/g, '_')}_${currentDate.format('YYYY-MM-DD')}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const printRecipe = (mealData, mealType) => {
+    const { name, ingredients, instructions, duration, nutrition } = mealData;
+    
+    const printContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #1c64f2; text-align: center; margin-bottom: 30px;">🍽️ ${name}</h1>
+        
+        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <p><strong>   Durée:</strong> ${duration || 'Non spécifiée'}</p>
+          <p><strong>   Date:</strong> ${currentDate.format('DD/MM/YYYY')}</p>
+          <p><strong>   Repas:</strong> ${mealType === 'breakfast' ? 'Petit-déjeuner' : mealType === 'lunch' ? 'Déjeuner' : 'Dîner'}</p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h2 style="color: #374151; border-bottom: 2px solid #1c64f2; padding-bottom: 5px;">📋 Ingrédients</h2>
+          <ul style="line-height: 1.6;">
+            ${ingredients?.map(ingredient => `<li>${ingredient}</li>`).join('') || '<li>Aucun ingrédient spécifié</li>'}
+          </ul>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h2 style="color: #374151; border-bottom: 2px solid #1c64f2; padding-bottom: 5px;">‍�� Instructions</h2>
+          <ol style="line-height: 1.6;">
+            ${instructions?.map(instruction => `<li>${instruction}</li>`).join('') || '<li>Aucune instruction spécifiée</li>'}
+          </ol>
+        </div>
+        
+        <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; border-left: 4px solid #1c64f2;">
+          <h3 style="color: #1c64f2; margin-top: 0;">�� Valeurs Nutritionnelles</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <p><strong>Calories:</strong> ${nutrition?.calories || 0} kcal</p>
+            <p><strong>Protéines:</strong> ${nutrition?.protein || 0}g</p>
+            <p><strong>Glucides:</strong> ${nutrition?.carbohydrates || 0}g</p>
+            <p><strong>Lipides:</strong> ${nutrition?.fat || 0}g</p>
+          </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px;">
+          <p>Généré par GoalFit - Votre compagnon fitness</p>
+        </div>
+      </div>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Recette - ${name}</title>
+          <style>
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          ${printContent}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  const shareRecipe = async (mealData, mealType) => {
+    const { name, ingredients, instructions, duration, nutrition } = mealData;
+    
+    const shareText = `${name}
+ ${duration || 'Durée non spécifiée'}
+ ${currentDate.format('DD/MM/YYYY')}
+
+ Ingrédients:
+${ingredients?.slice(0, 3).map(ingredient => `• ${ingredient}`).join('\n')}${ingredients?.length > 3 ? '\n• ...' : ''}
+
+ Nutrition: ${nutrition?.calories || 0} kcal | ${nutrition?.protein || 0}g protéines
+
+Généré par GoalFit`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Recette: ${name}`,
+          text: shareText,
+          url: window.location.href
+        });
+      } catch (err) {
+        console.log('Error sharing:', err);
+      }
+    } else {
+      // Fallback: copy to clipboard
+      try {
+        await navigator.clipboard.writeText(shareText);
+        alert('Recette copiée dans le presse-papiers!');
+      } catch (err) {
+        console.log('Error copying to clipboard:', err);
+      }
+    }
+  };
+
   const MealCard = ({ mealType, mealData, isCompleted, onToggleComplete }) => {
-    const { name, ingredients, instructions, duration, nutrition, imageUrl } =
-      mealData;
+    const { name, ingredients, instructions, duration, nutrition, imageUrl } = mealData;
+    const isToday = currentDate.format("YYYY-MM-DD") === dayjs().format("YYYY-MM-DD");
 
     const displayImage = imageUrl || "/img/benefit-one.png";
+    
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg p-4 relative">
         <div className="relative w-full h-[300px] md:h-[400px]">
@@ -238,6 +382,8 @@ const MealPlan = () => {
                 pill
                 color={isCompleted ? "gray" : "green"}
                 onClick={() => onToggleComplete(mealType)}
+                disabled={!isToday} // Disable for non-current days
+                title={!isToday ? "Seulement pour aujourd'hui" : ""}
               >
                 {isCompleted ? (
                   <HiX className="h-6 w-6" />
@@ -256,8 +402,39 @@ const MealPlan = () => {
           <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
             {name}
           </h3>
+          
+          {/* Recipe Actions */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => downloadRecipe(mealData, mealType)}
+              className="flex items-center gap-2 px-3 py-2 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-lg transition-colors duration-200"
+              title="Télécharger la recette"
+            >
+              <MdDownload className="h-4 w-4" />
+              <span className="text-sm">Télécharger</span>
+            </button>
+            
+            <button
+              onClick={() => printRecipe(mealData, mealType)}
+              className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors duration-200"
+              title="Imprimer la recette"
+            >
+              <MdPrint className="h-4 w-4" />
+              <span className="text-sm">Imprimer</span>
+            </button>
+            
+            <button
+              onClick={() => shareRecipe(mealData, mealType)}
+              className="flex items-center gap-2 px-3 py-2 bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:hover:bg-green-800 text-green-700 dark:text-green-300 rounded-lg transition-colors duration-200"
+              title="Partager la recette"
+            >
+              <MdShare className="h-4 w-4" />
+              <span className="text-sm">Partager</span>
+            </button>
+          </div>
         </div>
 
+        {/* Rest of the meal card content remains the same */}
         <div className="mt-4">
           <h3 className="text-xl font-bold text-gray-900 dark:text-white">
             Ingrédients
