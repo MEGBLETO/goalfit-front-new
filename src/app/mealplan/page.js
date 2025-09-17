@@ -253,7 +253,7 @@ Généré par GoalFit - Votre compagnon fitness
     
     const printContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #1c64f2; text-align: center; margin-bottom: 30px;">🍽️ ${name}</h1>
+        <h1 style="color: #1c64f2; text-align: center; margin-bottom: 30px;"> ${name}</h1>
         
         <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
           <p><strong>   Durée:</strong> ${duration || 'Non spécifiée'}</p>
@@ -262,21 +262,21 @@ Généré par GoalFit - Votre compagnon fitness
         </div>
         
         <div style="margin-bottom: 20px;">
-          <h2 style="color: #374151; border-bottom: 2px solid #1c64f2; padding-bottom: 5px;">📋 Ingrédients</h2>
+          <h2 style="color: #374151; border-bottom: 2px solid #1c64f2; padding-bottom: 5px;"> Ingrédients</h2>
           <ul style="line-height: 1.6;">
             ${ingredients?.map(ingredient => `<li>${ingredient}</li>`).join('') || '<li>Aucun ingrédient spécifié</li>'}
           </ul>
         </div>
         
         <div style="margin-bottom: 20px;">
-          <h2 style="color: #374151; border-bottom: 2px solid #1c64f2; padding-bottom: 5px;">‍�� Instructions</h2>
+          <h2 style="color: #374151; border-bottom: 2px solid #1c64f2; padding-bottom: 5px;">‍ Instructions</h2>
           <ol style="line-height: 1.6;">
             ${instructions?.map(instruction => `<li>${instruction}</li>`).join('') || '<li>Aucune instruction spécifiée</li>'}
           </ol>
         </div>
         
         <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; border-left: 4px solid #1c64f2;">
-          <h3 style="color: #1c64f2; margin-top: 0;">�� Valeurs Nutritionnelles</h3>
+          <h3 style="color: #1c64f2; margin-top: 0;"> Valeurs Nutritionnelles</h3>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <p><strong>Calories:</strong> ${nutrition?.calories || 0} kcal</p>
             <p><strong>Protéines:</strong> ${nutrition?.protein || 0}g</p>
