@@ -10,20 +10,25 @@ import { useForm, FormProvider } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import { getToken, getUserId, getAuthHeaders } from '../../utils/jwtUtils'
+import { toast } from 'react-toastify'
 
 export default function MultiStepForm() {
   const router = useRouter()
   const [step, setStep] = useState(1)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const methods = useForm({
     defaultValues: {
       gender: '',
       dateOfBirth: '',
+      phoneNumber: '',
       fitnessLevel: '',
+      height: '',
       weight: '',
       objectiveWeight: '',
+      selectedObjective: '',
       restrictions: [],
-      goal: '', 
+      goal: '',
       equipment: [],
       healthConsiderations: [],
       daysPerWeek: '',
@@ -32,7 +37,7 @@ export default function MultiStepForm() {
     mode: 'onBlur',
   })
 
-  const { clearErrors } = methods
+  const { clearErrors, setError } = methods
 
   const [validationTrigger, setValidationTrigger] = useState(
     () => async () => true
@@ -98,16 +103,22 @@ export default function MultiStepForm() {
   }
 
   const onSubmit = async (data) => {
+    if (isSubmitting) return
+
+    setIsSubmitting(true)
+
     try {
       const formattedData = formatSubmissionData(data)
       const token = getToken()
       if (!token) {
-        throw new Error('No token found')
+        toast.error('Session expirée. Veuillez vous reconnecter.')
+        router.push('/login')
+        return
       }
       const userId = getUserId(token)
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-    
-      
+
+
       // Update user profile data
       const response = await axios.put(
         `${baseUrl}/user/${userId}`,
@@ -116,9 +127,9 @@ export default function MultiStepForm() {
           headers: getAuthHeaders(token),
         }
       )
-      
+
       if (response.status === 200) {
-        
+
         // Update firstLogin to false
         await axios.patch(
           `${baseUrl}/user/${userId}/first-login`,
@@ -127,13 +138,40 @@ export default function MultiStepForm() {
             headers: getAuthHeaders(token),
           }
         )
-        
+
+        toast.success('Profil mis à jour avec succès!')
         router.push('/subscription')
       } else {
-        console.error('Failed to update user:', response.data.message)
+        toast.error('Échec de la mise à jour du profil.')
       }
     } catch (error) {
       console.error('Error during submission:', error)
+
+      // Handle specific error cases
+      if (error.response?.status === 400) {
+        const errorMessage = error.response?.data?.message || 'Erreur de validation'
+
+        // Check if it's a phone number duplicate error
+        if (errorMessage.includes('Contact number is already in use')) {
+          setError('phoneNumber', {
+            type: 'manual',
+            message: 'Ce numéro de téléphone est déjà utilisé par un autre compte.'
+          })
+          toast.error('Ce numéro de téléphone est déjà utilisé.')
+          setStep(2) // Go back to PersonalInfo step where phone number is
+        } else {
+          toast.error(errorMessage)
+        }
+      } else if (error.response?.status === 401) {
+        toast.error('Session expirée. Veuillez vous reconnecter.')
+        router.push('/login')
+      } else if (error.response?.status === 500) {
+        toast.error('Erreur du serveur. Veuillez réessayer plus tard.')
+      } else {
+        toast.error('Une erreur est survenue. Veuillez réessayer.')
+      }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -189,26 +227,26 @@ export default function MultiStepForm() {
         </div>
         <div className="w-full max-w-lg my-auto md:px-0 px-4 dark:bg-gray-900">
           <FormProvider {...methods}>
-            <form onSubmit={e => {
-              if (step !== 7) {
+            <form
+              onSubmit={e => {
                 e.preventDefault();
-                return;
-              }
-              handleSubmit(onSubmit)(e);
-            }}>
+                if (step === 7) {
+                  handleSubmit(onSubmit)(e);
+                }
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && step !== 7) {
+                  e.preventDefault();
+                }
+              }}
+            >
               <FormStep
                 step={step}
                 setValidationTrigger={setValidationTrigger}
                 setClearErrorsTrigger={setClearErrorsTrigger}
+                isSubmitting={isSubmitting}
               />
-              {step === 7 ? (
-                <button
-                  type="submit"
-                  className="mt-4 mx-6 md:mx-auto p-3 w-full bg-blue-600 text-white dark:bg-blue-500 dark:hover:bg-blue-400 rounded-md mb-6"
-                >
-                  Soumettre
-                </button>
-              ) : (
+              {step !== 7 && (
                 <button
                   type="button"
                   onClick={handleNext}

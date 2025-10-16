@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useFormContext } from 'react-hook-form' 
+import { useFormContext } from 'react-hook-form'
 import { useTheme } from '@mui/material/styles'
 import {
-  TextField,
   FormControl,
   InputLabel,
   Select,
-  InputAdornment,
   OutlinedInput,
   MenuItem,
   Box,
@@ -68,17 +66,12 @@ export default function DietaryInfo({
 
     // Set validation trigger to validate form when required
     setValidationTrigger(() => async () => {
-      const isValid = await trigger([
-        'weight',
-        'objectiveWeight',
-        'height',
-        'restrictions',
-      ])
+      const isValid = await trigger(['restrictions'])
       return isValid
     })
     setClearErrorsTrigger(
       () => () =>
-        clearErrors(['weight', 'objectiveWeight', 'height', 'restrictions'])
+        clearErrors(['restrictions'])
     )
   }, [
     setValidationTrigger,
@@ -113,74 +106,10 @@ export default function DietaryInfo({
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-4">
-        {/* Current Weight Input */}
-        <TextField
-          className="col-span-1"
-          label="Poids actuel"
-          variant="outlined"
-          margin="normal"
-          error={!!errors.weight} 
-          helperText={errors.weight ? errors.weight.message : ''}
-          {...register('weight', { required: 'Ce champ est requis' })} 
-          InputLabelProps={{
-            className: 'dark:text-gray-300',
-          }}
-          inputProps={{
-            style: { height: '40px' },
-            className: 'focus:ring-transparent',
-          }}
-        />
-
-        {/* Objective Weight Input */}
-        <TextField
-          className="col-span-1"
-          label="Poids souhaité"
-          variant="outlined"
-          margin="normal"
-          error={!!errors.objectiveWeight} 
-          helperText={
-            errors.objectiveWeight ? errors.objectiveWeight.message : ''
-          }
-          {...register('objectiveWeight', { required: 'Ce champ est requis' })}
-          InputLabelProps={{
-            className: 'dark:text-gray-300',
-          }}
-          inputProps={{
-            style: { height: '40px' },
-            className: 'focus:ring-transparent',
-          }}
-        />
-
-        {/* Height Input */}
-        <FormControl
-          variant="outlined"
-          margin="normal"
-          className="col-span-2"
-          error={!!errors.height}
-        >
-          <InputLabel htmlFor="height" className="dark:text-gray-300">
-            Taille
-          </InputLabel>
-          <OutlinedInput
-            id="height"
-            label="Taille"
-            endAdornment={<InputAdornment position="end">cm</InputAdornment>}
-            className="dark:text-gray-100 dark:bg-gray-800 dark:border-gray-600"
-            {...register('height', { required: 'Ce champ est requis' })} 
-            inputProps={{
-              style: { height: '40px' },
-              className: 'focus:ring-transparent',
-            }} 
-          />
-          {errors.height && (
-            <FormHelperText error>{errors.height.message}</FormHelperText>
-          )}
-        </FormControl>
-
+      <div className="w-full">
         {/* Dietary Restrictions Select */}
         <FormControl
-          className="col-span-2"
+          fullWidth
           margin="normal"
           error={!!errors.restrictions}
         >
@@ -201,7 +130,7 @@ export default function DietaryInfo({
                 id="select-multiple-chip"
                 label="Restrictions alimentaires"
                 className="dark:text-gray-100 dark:bg-gray-800 dark:border-gray-600"
-                style={inputStyle} 
+                style={inputStyle}
               />
             }
             renderValue={(selected) => (

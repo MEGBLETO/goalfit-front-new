@@ -31,7 +31,7 @@ export default function PersonalInfo({
     // Set validation trigger for this step
     setValidationTrigger(
       () => () =>
-        trigger(['gender', 'dateOfBirth', 'phoneNumber', 'fitnessLevel'])
+        trigger(['gender', 'dateOfBirth', 'phoneNumber', 'fitnessLevel', 'height', 'weight', 'objectiveWeight'])
     )
 
     // Set error clearing trigger for this step
@@ -42,6 +42,9 @@ export default function PersonalInfo({
           'dateOfBirth',
           'phoneNumber',
           'fitnessLevel',
+          'height',
+          'weight',
+          'objectiveWeight',
         ])
     )
 
@@ -167,6 +170,72 @@ export default function PersonalInfo({
           {errors.fitnessLevel && (
             <FormHelperText error>{errors.fitnessLevel.message}</FormHelperText>
           )}
+        </FormControl>
+
+        {/* Height */}
+        <FormControl fullWidth margin="normal" error={!!errors.height}>
+          <TextField
+            type="number"
+            label="Taille (cm)"
+            {...register('height', {
+              required: 'La taille est requise',
+              min: { value: 100, message: 'La taille doit être au moins 100 cm' },
+              max: { value: 250, message: 'La taille ne peut pas dépasser 250 cm' },
+            })}
+            variant="outlined"
+            error={!!errors.height}
+            helperText={errors.height && errors.height.message}
+            slotProps={{
+              input: {
+                style: { height: '56px' },
+                className: 'focus:ring-transparent',
+              },
+            }}
+          />
+        </FormControl>
+
+        {/* Current Weight */}
+        <FormControl fullWidth margin="normal" error={!!errors.weight}>
+          <TextField
+            type="number"
+            label="Poids actuel (kg)"
+            {...register('weight', {
+              required: 'Le poids actuel est requis',
+              min: { value: 30, message: 'Le poids doit être au moins 30 kg' },
+              max: { value: 300, message: 'Le poids ne peut pas dépasser 300 kg' },
+            })}
+            variant="outlined"
+            error={!!errors.weight}
+            helperText={errors.weight && errors.weight.message}
+            slotProps={{
+              input: {
+                style: { height: '56px' },
+                className: 'focus:ring-transparent',
+              },
+            }}
+          />
+        </FormControl>
+
+        {/* Objective Weight */}
+        <FormControl fullWidth margin="normal" error={!!errors.objectiveWeight}>
+          <TextField
+            type="number"
+            label="Poids souhaité (kg)"
+            {...register('objectiveWeight', {
+              required: 'Le poids souhaité est requis',
+              min: { value: 30, message: 'Le poids souhaité doit être au moins 30 kg' },
+              max: { value: 300, message: 'Le poids souhaité ne peut pas dépasser 300 kg' },
+            })}
+            variant="outlined"
+            error={!!errors.objectiveWeight}
+            helperText={errors.objectiveWeight && errors.objectiveWeight.message}
+            slotProps={{
+              input: {
+                style: { height: '56px' },
+                className: 'focus:ring-transparent',
+              },
+            }}
+          />
         </FormControl>
       </div>
     </div>

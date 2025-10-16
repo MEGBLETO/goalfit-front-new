@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Title } from 'chart.js'
 import { Doughnut, Line } from 'react-chartjs-2'
 import { HiChartPie, HiViewBoards, HiFire, HiUser } from 'react-icons/hi'
@@ -108,8 +108,9 @@ export default function Home() {
 
   const fetchMealPlans = async (id) => {
     const token = getToken()
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
     try {
-      const response = await fetch('http://localhost:5001/bdd/meal/' + id, {
+      const response = await fetch(`${baseUrl}/bdd/meal/${id}`, {
         method: 'GET',
         headers: getAuthHeaders(token),
       })
@@ -145,12 +146,13 @@ export default function Home() {
 
   const fetchWorkoutPlans = async (id) => {
     const token = getToken()
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
     if (!token) {
       console.error('No token found, please login.')
       return
     }
     try {
-      const response = await fetch('http://localhost:5001/bdd/workout/' + id, {
+      const response = await fetch(`${baseUrl}/bdd/workout/${id}`, {
         method: 'GET',
         headers: getAuthHeaders(token),
       })

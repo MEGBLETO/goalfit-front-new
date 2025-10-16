@@ -21,6 +21,7 @@ export default function FormStep({
   step,
   setValidationTrigger,
   setClearErrorsTrigger,
+  isSubmitting,
 }) {
   const StepComponent = Components[step - 1]
 
@@ -46,6 +47,7 @@ export default function FormStep({
       <StepComponent
         setValidationTrigger={setValidationTrigger}
         setClearErrorsTrigger={setClearErrorsTrigger}
+        isSubmitting={isSubmitting}
       />
     </div>
   )

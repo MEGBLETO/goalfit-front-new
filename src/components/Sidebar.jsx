@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import Image from 'next/image'
 import { NavigateNext } from '@mui/icons-material'
 import { Button, Sidebar, Card } from 'flowbite-react'
@@ -14,14 +14,14 @@ var isToday = require('dayjs/plugin/isToday')
 
 dayjs.extend(isToday)
 
-export default function SidebarHome({ isSidebarOpen }) {
+function SidebarHome({ isSidebarOpen }) {
   const pathname = usePathname()
   const router = useRouter()
-  const isActive = (path) => pathname === path
+  const isActive = useCallback((path) => pathname === path, [pathname])
   const [user, setUser] = useState({})
   const [loading, setLoading] = useState(true)
 
-  const sidebarItems = [
+  const sidebarItems = useMemo(() => [
     {
       name: 'Dashboard',
       link: '/home',
@@ -42,9 +42,9 @@ export default function SidebarHome({ isSidebarOpen }) {
       link: '/profil',
       icon: HiUser,
     },
-  ]
+  ], [])
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     const token = getToken()
 
     if (!token) {
@@ -74,11 +74,11 @@ export default function SidebarHome({ isSidebarOpen }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [router])
 
   useEffect(() => {
     fetchUserData()
-  }, [])
+  }, [fetchUserData])
 
   return (
     <>
@@ -154,3 +154,5 @@ export default function SidebarHome({ isSidebarOpen }) {
     </>
   )
 }
+
+export default memo(SidebarHome)

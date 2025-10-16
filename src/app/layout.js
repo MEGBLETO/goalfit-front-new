@@ -13,6 +13,8 @@ import { usePathname } from 'next/navigation';
 import GoogleAnalytics from '../components/GoogleAnalytics';
 import AnalyticsListener from '../components/AnalyticsListener';
 import { Suspense } from 'react';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 
 
@@ -53,6 +55,18 @@ export default function RootLayout({ children }) {
               </div>
             </div>)}
           <PopupWidget />
+          <ToastContainer
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="colored"
+          />
         </ThemeProvider>
       </body>
     </html>

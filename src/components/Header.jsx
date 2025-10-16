@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import Logo from '../components/logo'
@@ -65,30 +65,30 @@ const Navbar = ({ handleSidebar }) => {
   const { theme, setTheme } = useTheme()
   const isDarkMode = theme === 'dark'
 
-  const toggleSidebar = () => {
+  const toggleSidebar = useCallback(() => {
     setIsSidebarOpen(!isSidebarOpen)
     handleSidebar(!isSidebarOpen)
-  }
+  }, [isSidebarOpen, handleSidebar])
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme(isDarkMode ? 'light' : 'dark')
-  }
+  }, [isDarkMode, setTheme])
 
-  const toggleProfileDropdown = () => setIsProfileOpen(!isProfileOpen)
+  const toggleProfileDropdown = useCallback(() => setIsProfileOpen(!isProfileOpen), [isProfileOpen])
 
-  const isActive = (path) => pathname === path
+  const isActive = useCallback((path) => pathname === path, [pathname])
 
-  const handleClick = (event) => {
+  const handleClick = useCallback((event) => {
     setAnchorEl(event.currentTarget)
-  }
+  }, [])
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setAnchorEl(null)
-  }
+  }, [])
 
-  const handleCloseDrawer = () => setIsSidebarOpen(false)
+  const handleCloseDrawer = useCallback(() => setIsSidebarOpen(false), [])
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     const token = getToken()
     if (!token) {
       router.push('/login')
@@ -125,16 +125,16 @@ const Navbar = ({ handleSidebar }) => {
     } finally {
       setUserLoading(false)
     }
-  }
+  }, [router])
 
   useEffect(() => {
     fetchUserData()
-  }, [])
+  }, [fetchUserData])
 
-  const signOut = () => {
+  const signOut = useCallback(() => {
     Cookies.remove('token')
     router.push('/login')
-  }
+  }, [router])
 
   const sidebarItems = [
     {
@@ -421,4 +421,4 @@ const Navbar = ({ handleSidebar }) => {
   )
 }
 
-export default Navbar
+export default memo(Navbar)
